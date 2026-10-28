@@ -48,3 +48,14 @@ test('post-introduction withdrawal ends participation without erasing the prior 
 test('saved data with impossible consent dependencies fails validation',()=>{
  const s=seed();s.cases[0].connected['M-A']=true;assert.throws(()=>assertState(s),e=>e.status===500);
 });
+test('a matchmaker can reject during review; closure is generic and cannot be resumed',()=>{
+ const s=run(seed(),'M-A','decline',{caseId:'TTU-101'}),c=snapshot(s,'M-B').cases.find(x=>x.id==='TTU-101');
+ assert.equal(c.phase,'closed');assert.deepEqual(c.actions,[]);assert.deepEqual(c.checks,[]);assert.ok(c.events.every(e=>!e.label.includes('M-A')));
+ assert.throws(()=>run(s,'M-B','resume',{caseId:'TTU-101'}),e=>e.status===403);
+ assert.throws(()=>run(seed(),'M-A','decline',{caseId:'TTU-102'}),e=>e.status===403);
+ for(const a of ['M-A','M-B','S-01','S-03'])for(const x of snapshot(seed(),a).cases)assert.equal(typeof x.nextAction,'string');
+});
+test('valid JSON with malformed events, identifiers, counters or receipt containers is rejected',()=>{
+ const corruptions=[s=>{s.cases[0].closed=true;s.cases[0].events=[null];},s=>{s.nextId=104;},s=>{s.receipts=[];},s=>{s.cases[0].id=null;},s=>{s.cases[0].updatedAt='yesterday';},s=>{s.version=-1;},s=>{s.receipts.foo='anything';},s=>{s.cases[0].events[0].label=42;},s=>{s.cases[0].held=s.cases[0].closed=true;},s=>{const c=structuredClone(s.cases[0]);c.id='TTU-104';s.cases[3]=c;}];
+ for(const corrupt of corruptions){const s=seed();corrupt(s);assert.throws(()=>assertState(s),e=>e.status===500);}
+});

@@ -7,7 +7,7 @@
 <section class="stats" aria-label="내 소개 현황"><div><span>진행 중</span><strong id="active">0</strong></div><div><span>잠시 보류</span><strong id="held">0</strong></div><div><span>연결 확인 누적 · 합성</span><strong id="introduced">0</strong></div><div><span>종료</span><strong id="closed">0</strong></div></section>
 <section class="board-head"><div><h2>나의 소개 보드</h2><p>단계마다 필요한 동의와 다음 행동이 달라요.</p></div><div class="board-controls"><label class="filter-label" for="filter">보기<select id="filter"><option value="all">전체 소개</option><option value="active">진행 중</option><option value="held">보류</option><option value="ended">완료·종료</option></select></label><button id="new">합성 소개 추가</button></div></section>
 <div id="empty" hidden>이 역할이 참여한 소개가 없습니다.<br><small>다른 사람의 소개 목록은 표시하지 않습니다.</small></div><section id="board" class="board" aria-label="소개 건 목록"></section>
-<footer><p>모든 후보와 응답은 합성입니다. 화면의 확인 동작은 실제 참여자의 동의나 만남 성과가 아닙니다.<br>보드는 주선자의 조율을 돕습니다. 새로운 후보를 자동 발굴하거나 만남·교제를 보장하지 않습니다.</p><p>명세 v1.1 · HW6 강경구 · 실제 서비스 연동 전</p></footer>
+<footer><p>모든 후보와 응답은 합성입니다. 화면의 확인 동작은 실제 참여자의 동의나 만남 성과가 아닙니다.<br>보드는 주선자의 조율을 돕습니다. 새로운 후보를 자동 발굴하거나 만남·교제를 보장하지 않습니다.</p><p>명세 v1.2 · HW6 강경구 · 실제 서비스 연동 전</p></footer>
 </main>
 <dialog id="detail"><div class="dialog-head"><h2 id="detail-title">소개 상세</h2><button id="close-detail" class="quiet" aria-label="소개 상세 닫기">닫기</button></div><div id="detail-body"></div></dialog>
 <dialog id="create"><div class="dialog-head"><h2>합성 소개 추가</h2><button id="close-create" class="quiet">취소</button></div><p>협력과 요약 공유가 승인된 합성 후보만 사용합니다.<br>실제 친구 정보를 입력하거나 초대하지 않습니다.</p><label for="pair">후보 쌍<select id="pair"></select></label><p id="create-message" role="status"></p><button id="create-submit">이 쌍으로 소개 건 만들기</button></dialog>

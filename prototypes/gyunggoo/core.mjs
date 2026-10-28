@@ -28,6 +28,7 @@ export function available(c,a){
  if(a.role==='matchmaker'){
   if(c.held)return [{type:'resume',label:'보류 해제'}];
   if(p==='review'&&!c.reviews[a.id])out.push({type:'review',label:'이 소개 검토 완료'});
+  if(p==='review')out.push({type:'decline',label:'이 소개 검토 거절'});
   if(p==='connection'&&!c.connected[a.id])out.push({type:'connect',label:'합성 연결 완료 확인'});
   if(['followup','done'].includes(p))out.push({type:'followup',label:'후속 확인 저장'});
   if(!['followup','done'].includes(p))out.push({type:'hold',label:'잠시 보류'});
@@ -43,7 +44,7 @@ export function nextAction(c,a){
  if(p==='closed')return '이번 소개는 종료됐어요. 새 연락을 발송하지 않아요.';
  if(p==='held')return '보류한 내용을 확인한 뒤 진행을 재개하세요.';
  if(p==='done')return '후속 기록을 남겼어요. 실제 만남과 소개 연결은 구분해요.';
- const act=own.find(x=>!['hold','withdraw'].includes(x.type));
+ const act=own.find(x=>!['hold','withdraw','decline'].includes(x.type));
  if(act)return {review:'이 소개를 검토하고 확인해 주세요.',accept:'내 소개 참여 여부를 선택해 주세요.',disclose:'연락 정보 공유 여부를 별도로 승인해 주세요.',connect:'실제로 연결했는지 확인해 주세요.',followup:'소개 후 실제 만남 여부를 기록해 주세요.'}[act.type];
  return {review:'다른 주선자의 검토를 기다리고 있어요.',consent:'싱글의 개별 소개 응답을 기다리고 있어요.',disclosure:'별도 정보 공유 승인을 기다리고 있어요.',connection:'다른 주선자의 실제 연결 확인을 기다리고 있어요.',followup:'소개 후 실제 만남 여부를 확인해 주세요.'}[p];
 }
@@ -94,10 +95,18 @@ export function reduce(state,actorId,command,at=new Date().toISOString()){
  assertState(next);return next;
 }
 export function assertState(s){
- if(!s||s.schema!==1||!Number.isInteger(s.version)||!Number.isInteger(s.nextId)||!Array.isArray(s.cases)||!s.receipts||typeof s.receipts!=='object')fail(500,'저장 데이터 형식이 다릅니다. 원본 파일을 보존하세요.');
- const ids=new Set();for(const c of s.cases){
+ const record=x=>x!==null&&typeof x==='object'&&!Array.isArray(x);
+ const time=x=>typeof x==='string'&&Number.isFinite(Date.parse(x))&&new Date(x).toISOString()===x;
+ if(!record(s)||s.schema!==1||!Number.isSafeInteger(s.version)||s.version<0||!Number.isSafeInteger(s.nextId)||s.nextId<105||!Array.isArray(s.cases)||!record(s.receipts))fail(500,'저장 데이터 형식이 다릅니다. 원본 파일을 보존하세요.');
+ for(const [key,value]of Object.entries(s.receipts)){
+  const parts=key.split(':');
+  if(parts.length!==2||!actors.some(a=>a.id===parts[0])||!/^[A-Za-z0-9-]{8,80}$/.test(parts[1])||typeof value!=='string'||value.length>4096)fail(500,'저장 데이터 요청 기록이 올바르지 않습니다.');
+ }
+ const ids=new Set(),activePairs=new Set();for(const c of s.cases){
+  if(!record(c)||typeof c.id!=='string'||!/^TTU-[1-9][0-9]{2,}$/.test(c.id)||!Number.isSafeInteger(Number(c.id.slice(4)))||Number(c.id.slice(4))>=s.nextId||!time(c.createdAt)||!time(c.updatedAt))fail(500,'저장 데이터 식별자·시각이 올바르지 않습니다.');
   const pair=pairs.find(p=>p.id===c.pairId);
-  if(!pair||ids.has(c.id)||JSON.stringify(c.owners)!==JSON.stringify(pair.owners)||JSON.stringify(c.singles)!==JSON.stringify(pair.singles)||typeof c.held!=='boolean'||typeof c.closed!=='boolean'||!Array.isArray(c.events))fail(500,'저장 데이터 관계가 올바르지 않습니다.');ids.add(c.id);
+  if(!pair||ids.has(c.id)||JSON.stringify(c.owners)!==JSON.stringify(pair.owners)||JSON.stringify(c.singles)!==JSON.stringify(pair.singles)||typeof c.held!=='boolean'||typeof c.closed!=='boolean'||c.held&&c.closed||!Array.isArray(c.events)||!c.events.length||c.events.some(e=>!record(e)||!time(e.at)||typeof e.label!=='string'||!e.label.trim()))fail(500,'저장 데이터 관계·이벤트가 올바르지 않습니다.');ids.add(c.id);
+  if(!c.closed){if(activePairs.has(c.pairId))fail(500,'진행 중인 후보 쌍이 중복 저장됐습니다.');activePairs.add(c.pairId);}
   for(const [field,keys] of [['reviews',c.owners],['accepted',c.singles],['disclosed',c.singles],['connected',c.owners]]){
    if(!c[field]||Object.keys(c[field]).sort().join()!==[...keys].sort().join()||Object.values(c[field]).some(v=>typeof v!=='boolean'))fail(500,'저장 데이터 응답이 올바르지 않습니다.');
   }

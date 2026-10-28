@@ -3,7 +3,7 @@
 현재 HW6 제출 후보. 이전 SAI 카운터·싱글 중심 검토 자료와 구분한다. 외부 패키지·API 키·유료 인프라 없이 Node.js 18 이상으로 실행한다.
 
 ```powershell
-node --test prototypes/gyunggoo/tests/core.test.mjs prototypes/gyunggoo/tests/integration.test.mjs
+node --test prototypes/gyunggoo/tests/core.test.mjs prototypes/gyunggoo/tests/integration.test.mjs prototypes/gyunggoo/tests/ui.test.mjs
 node prototypes/gyunggoo/server.mjs 8767
 ```
 
