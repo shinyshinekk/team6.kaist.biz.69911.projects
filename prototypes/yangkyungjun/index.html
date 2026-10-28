@@ -1,0 +1,747 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>뚜 — 소개 부탁 보내기</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nanum+Myeongjo:wght@400;700;800&family=Cormorant+Garamond:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          cream:  '#FAF6F0',
+          sand:   '#F5EEDC',
+          ivory:  '#EFE8D8',
+          paper:  '#FFFDF8',
+          ink:    '#332D2B',
+          ink2:   '#6E635C',
+          ink3:   '#9C9087',
+          line:   '#E3D8C2',
+          line2:  '#D3C4A8',
+          seal:   '#8C3B29',
+          sealsoft:'#F6EBE6',
+          wood:   '#A9754B',
+          woodlt: '#C9A271',
+          wooddk: '#6E4A2F',
+          pine:   '#5C6B53'
+        },
+        fontFamily: {
+          myeongjo: ['"Nanum Myeongjo"', 'Batang', '바탕', 'serif'],
+          garamond: ['"Cormorant Garamond"', 'Georgia', 'serif']
+        },
+        boxShadow: {
+          plate: '0 28px 70px -44px rgba(62,40,20,.85), 0 1px 0 #fff inset',
+          lift:  '0 18px 38px -26px rgba(62,40,20,.7)'
+        }
+      }
+    }
+  };
+</script>
+
+<style>
+  html { scroll-behavior: smooth; }
+  body { letter-spacing: .055em; }
+  .tracking-seal { letter-spacing: .34em; }
+  .tracking-title { letter-spacing: .22em; }
+
+  /* ── 한옥 방: 어두운 우드 벽 ── */
+  .hanok-wall{
+    background:
+      repeating-linear-gradient(90deg, rgba(20,11,4,.26) 0 2px, transparent 2px 58px),
+      linear-gradient(180deg, #4E3321 0%, #3A2415 46%, #241509 100%);
+  }
+  /* ── 창 한 장: 백라이트 한지 + 정자살 + 문틀 ── */
+  .shoji{
+    background:
+      repeating-linear-gradient(0deg,  rgba(126,84,42,.34) 0 2px, transparent 2px 23px),
+      repeating-linear-gradient(90deg, rgba(126,84,42,.34) 0 2px, transparent 2px 23px),
+      radial-gradient(118% 88% at 50% 44%, #FFF8E4 0%, #FCEBC0 36%, #EDD09A 70%, #D2AC79 100%);
+    border: 6px solid #3A2412;
+    border-radius: 2px;
+    box-shadow:
+      0 0 70px 16px rgba(255,214,145,.26),
+      inset 0 0 44px rgba(168,120,64,.34);
+  }
+  /* 창 위를 가로지르는 인방(보) */
+  .hanok-beam{
+    background: linear-gradient(180deg, #3A2411 0%, #5A3A1E 45%, #2E1C0D 100%);
+    box-shadow: 0 14px 26px -12px rgba(24,13,5,.8);
+  }
+  /* ── 마루 ── */
+  .hanok-floor{
+    background:
+      repeating-linear-gradient(90deg, rgba(30,17,7,.34) 0 2px, transparent 2px 92px),
+      repeating-linear-gradient(0deg,  rgba(255,230,188,.055) 0 1px, transparent 1px 8px),
+      linear-gradient(180deg, #8A5F3A 0%, #613F25 48%, #3C2512 100%);
+  }
+  /* ── 우드 패널 ── */
+  .wood-panel{
+    background:
+      repeating-linear-gradient(90deg, rgba(110,74,47,.055) 0 2px, transparent 2px 11px),
+      linear-gradient(165deg, #D7B98A 0%, #C9A271 100%);
+  }
+  .paper-grain{
+    background-image:
+      repeating-linear-gradient(0deg, rgba(140,110,70,.035) 0 1px, transparent 1px 4px);
+  }
+
+  select.hanok{
+    appearance:none; -webkit-appearance:none;
+    background-image:
+      linear-gradient(45deg, transparent 50%, #9C9087 50%),
+      linear-gradient(135deg, #9C9087 50%, transparent 50%);
+    background-position: calc(100% - 15px) center, calc(100% - 10px) center;
+    background-size: 5px 5px, 5px 5px;
+    background-repeat:no-repeat;
+  }
+
+  @keyframes pop { 0%{transform:scale(.4);opacity:0} 60%{transform:scale(1.14)} 100%{transform:scale(1);opacity:1} }
+  .animate-pop{ animation:pop .34s cubic-bezier(.34,1.56,.64,1) both; }
+  @keyframes risein { from{opacity:0; transform:translateY(14px)} to{opacity:1; transform:translateY(0)} }
+  .animate-rise{ animation:risein .5s ease both; }
+  @keyframes nudge { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-4px)} 75%{transform:translateX(4px)} }
+  .animate-nudge{ animation:nudge .32s ease; }
+
+  .toast{ transition: opacity .45s ease, transform .45s cubic-bezier(.22,1,.36,1); }
+  .toast.hide{ opacity:0; transform:translate(-50%,-14px); pointer-events:none; }
+
+  ::-webkit-scrollbar{width:11px;height:11px}
+  ::-webkit-scrollbar-track{background:#F1E9D9}
+  ::-webkit-scrollbar-thumb{background:#CDBC9C;border:3px solid #F1E9D9;border-radius:99px}
+</style>
+</head>
+
+<body class="bg-cream font-myeongjo text-ink antialiased pb-28">
+
+<!-- ════════ 토스트 ════════ -->
+<div id="toast" class="toast hide fixed left-1/2 top-7 z-50 -translate-x-1/2 rounded-sm border border-line2 bg-paper px-7 py-3.5 text-[13.5px] shadow-plate">
+  <span class="mr-2.5 text-seal">◆</span><span id="toastText"></span>
+</div>
+
+<!-- ════════ 히어로 ════════ -->
+<header class="relative min-h-[560px] overflow-hidden md:min-h-[660px]">
+  <div class="hanok-wall absolute inset-0"></div>
+
+  <!-- 창 네 장 (화면이 좁아지면 수를 줄인다) -->
+  <div class="absolute inset-x-0 bottom-[30%] top-[7%] flex gap-[2.2%] px-[2.5%]">
+    <div class="shoji flex-1"></div>
+    <div class="shoji flex-1"></div>
+    <div class="shoji hidden flex-1 sm:block"></div>
+    <div class="shoji hidden flex-1 lg:block"></div>
+  </div>
+
+  <div class="hanok-beam absolute inset-x-0 top-0 h-[7%]"></div>
+  <div class="hanok-floor absolute inset-x-0 bottom-0 h-[30%]"></div>
+  <div class="absolute inset-x-0 bottom-[30%] h-[8px] bg-gradient-to-b from-[#1C1005] to-[#55371C]"></div>
+  <!-- 마루에 비치는 창의 반사 -->
+  <div class="absolute inset-x-0 bottom-0 h-[30%] opacity-20 [background:repeating-linear-gradient(90deg,rgba(255,238,200,.65)_0_26px,transparent_26px_150px)]"></div>
+
+  <div class="absolute inset-0 bg-gradient-to-b from-[#241506]/45 via-[#241506]/15 to-[#1E1004]/78"></div>
+  <div class="absolute inset-0 shadow-[inset_0_0_170px_60px_rgba(28,16,6,.5)]"></div>
+  <!-- 글이 놓일 자리에 드리우는 그늘 -->
+  <div class="absolute inset-0 [background:radial-gradient(46%_44%_at_50%_45%,rgba(22,12,4,.80)_0%,rgba(22,12,4,.58)_42%,rgba(22,12,4,.18)_72%,transparent_88%)]"></div>
+
+  <div class="relative z-10 mx-auto flex min-h-[560px] w-[92%] max-w-5xl flex-col items-center justify-center py-24 text-center md:min-h-[660px]">
+    <p class="font-garamond tracking-seal text-[11px] uppercase text-[#EBD6B2]/85">A Private Introduction Club</p>
+
+    <div class="my-6 h-10 w-px bg-gradient-to-b from-transparent via-[#E8D2AC]/70 to-transparent"></div>
+
+    <h1 class="tracking-title text-[76px] font-bold leading-none text-[#FBF3E4] drop-shadow-[0_3px_18px_rgba(30,16,6,.75)] md:text-[104px]">뚜</h1>
+
+    <p class="mt-6 text-[17px] text-[#F7EEDC] [text-shadow:0_2px_14px_rgba(24,13,5,.9)] md:text-[20px]">나를 아는 사람이, 인연을 짓다.</p>
+    <p class="mt-3 max-w-xl text-[13.5px] leading-7 text-[#E8D7BB]/90 [text-shadow:0_2px_12px_rgba(24,13,5,.9)]">
+      믿을 수 있는 지인이 건네는 프라이빗 소개.<br class="hidden sm:block">
+      조건은 구조로 전하고, 거절은 조용하게 닫습니다.
+    </p>
+
+    <a href="#gate" class="group mt-10 inline-flex items-center gap-3 rounded-full border border-[#E3C79B]/40 bg-gradient-to-b from-[#B9854F] to-[#96612F] px-9 py-3.5 text-[14px] text-[#FDF6E7] shadow-lift transition-all duration-300 hover:from-[#C9955C] hover:to-[#A56C36] hover:shadow-[0_22px_40px_-22px_rgba(0,0,0,.8)]">
+      소개 부탁 보내기
+      <span class="transition-transform duration-300 group-hover:translate-x-1.5">→</span>
+    </a>
+
+    <div class="mt-14 flex items-center gap-4 text-[11px] text-[#E0CDAC]/65">
+      <span class="h-px w-10 bg-[#E0CDAC]/35"></span>
+      <span class="font-garamond tracking-seal uppercase">Feature ①</span>
+      <span>소개 부탁 보내기</span>
+      <span class="h-px w-10 bg-[#E0CDAC]/35"></span>
+    </div>
+  </div>
+</header>
+
+<!-- ════════ 본문 ════════ -->
+<main class="relative z-20 mx-auto -mt-20 w-[92%] max-w-[1280px] md:-mt-28">
+  <div class="grid grid-cols-1 gap-7 lg:grid-cols-2 lg:gap-8">
+
+    <!-- ──── 대문 ──── -->
+    <section id="gate" class="paper-grain animate-rise scroll-mt-6 rounded-[5px] border border-line bg-paper shadow-plate">
+      <div class="border-b border-line/80 px-7 py-7 md:px-9">
+        <p class="font-garamond tracking-seal text-[10px] uppercase text-ink3">The Gate · 싱글</p>
+        <h2 class="mt-2.5 text-[23px] tracking-title">대문 <span class="ml-1.5 text-[12px] font-normal tracking-normal text-ink3">大門</span></h2>
+        <p class="mt-2 text-[12.5px] leading-6 text-ink2">내 조건을 담아, 연결된 주선자 한 분께 부탁을 건넵니다.</p>
+      </div>
+
+      <div class="px-7 py-7 md:px-9">
+
+        <!-- 주선자 -->
+        <div class="mb-3.5 flex items-baseline justify-between">
+          <h3 class="text-[13.5px] tracking-title text-ink">누구에게 부탁할까요</h3>
+          <span id="slotInfo" class="font-garamond text-[11.5px] tracking-wider text-ink3"></span>
+        </div>
+        <div id="mmRow" class="grid grid-cols-1 gap-3 sm:grid-cols-3"></div>
+
+        <div class="my-8 flex items-center gap-4">
+          <span class="h-px flex-1 bg-line"></span>
+          <span class="text-[10px] tracking-seal text-ink3">條件</span>
+          <span class="h-px flex-1 bg-line"></span>
+        </div>
+
+        <!-- 조건 -->
+        <div class="mb-4 flex items-baseline justify-between">
+          <h3 class="text-[13.5px] tracking-title text-ink">이런 사람을 소개해 주세요</h3>
+          <span id="mustMeter" class="flex items-center gap-2 text-[11.5px] text-ink3"></span>
+        </div>
+        <div id="condList" class="space-y-0.5"></div>
+
+        <p class="mt-4 rounded-sm border-l-2 border-line2 bg-ivory/50 px-4 py-2.5 text-[11.5px] leading-6 text-ink2">
+          필수는 <b class="text-seal">두 개까지</b>입니다. 무엇을 양보할지 고르는 일이 이 기능의 핵심입니다.
+        </p>
+
+        <!-- 한마디 -->
+        <div class="mt-7">
+          <div class="mb-2.5 flex items-baseline justify-between">
+            <h3 class="text-[13.5px] tracking-title text-ink">한마디 <span class="text-[11px] text-ink3">(선택)</span></h3>
+            <span id="noteCount" class="font-garamond text-[11.5px] tracking-wider text-ink3"></span>
+          </div>
+          <textarea id="note" maxlength="200" rows="3"
+            class="w-full resize-y rounded-sm border border-line bg-[#FFFEFB] px-4 py-3 text-[13.5px] leading-7 text-ink outline-none transition-colors duration-300 placeholder:text-ink3/70 focus:border-wood/70 focus:bg-white"
+            placeholder="조건만으로는 전해지지 않는 한 가지를 적어 주세요."></textarea>
+        </div>
+
+        <div id="gateNotice" class="mt-4 hidden rounded-sm border-l-2 border-seal bg-sealsoft px-4 py-3 text-[12.5px] leading-6 text-seal"></div>
+
+        <div class="mt-7 flex flex-wrap items-center gap-3">
+          <button id="sendBtn"
+            class="rounded-full border border-wooddk/50 bg-gradient-to-b from-[#B9854F] to-[#96612F] px-9 py-3.5 text-[14px] tracking-title text-[#FDF6E7] shadow-lift transition-all duration-300 hover:from-[#C9955C] hover:to-[#A56C36] disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none">
+            부탁 보내기
+          </button>
+          <button id="cancelEditBtn"
+            class="hidden rounded-full border border-line2 px-7 py-3.5 text-[13px] tracking-title text-ink2 transition-colors duration-300 hover:bg-ivory hover:text-ink">
+            수정 그만두기
+          </button>
+        </div>
+
+        <div class="my-8 flex items-center gap-4">
+          <span class="h-px flex-1 bg-line"></span>
+          <span class="text-[10px] tracking-seal text-ink3">現況</span>
+          <span class="h-px flex-1 bg-line"></span>
+        </div>
+
+        <div class="mb-3.5 flex items-baseline justify-between">
+          <h3 class="text-[13.5px] tracking-title text-ink">내가 보낸 부탁</h3>
+          <span class="text-[11px] text-ink3">주선자가 닫은 이유는 알 수 없습니다</span>
+        </div>
+        <div id="myList" class="space-y-3.5"></div>
+      </div>
+    </section>
+
+    <!-- ──── 사랑채 ──── -->
+    <section class="paper-grain animate-rise rounded-[5px] border border-line bg-paper shadow-plate" style="animation-delay:.12s">
+      <div class="relative border-b border-line/80 px-7 py-7 md:px-9">
+        <p class="font-garamond tracking-seal text-[10px] uppercase text-ink3">The Guest Hall · 주선자</p>
+        <h2 class="mt-2.5 text-[23px] tracking-title">사랑채 <span class="ml-1.5 text-[12px] font-normal tracking-normal text-ink3">舍廊</span></h2>
+        <p class="mt-2 text-[12.5px] leading-6 text-ink2">받은 소개 부탁을 살펴보고, 확인 · 보류 · 종료합니다.</p>
+
+        <div class="absolute right-7 top-7 flex h-11 w-11 items-center justify-center rounded-[3px] bg-seal text-[19px] leading-none tracking-normal text-[#FBF0E6] shadow-lift md:right-9">뚜</div>
+      </div>
+
+      <div class="px-7 py-7 md:px-9">
+        <div id="mmTabs" class="mb-6 grid grid-cols-3 gap-2"></div>
+        <div id="inbox" class="space-y-3.5"></div>
+      </div>
+    </section>
+
+  </div>
+
+  <p class="py-12 text-center text-[11.5px] leading-7 text-ink3">
+    상태 기계는 <code class="font-garamond tracking-wide">intro-request.js</code> 안에 있습니다 ·
+    검증은 <code class="font-garamond tracking-wide">node --test</code> (22개)
+  </p>
+</main>
+
+<!-- ════════ 마당 · 시간 ════════ -->
+<div class="fixed inset-x-0 bottom-0 z-40 border-t border-[#4E4135] bg-[#2E241B]/97 backdrop-blur">
+  <div class="mx-auto flex w-[92%] max-w-[1280px] flex-wrap items-center justify-center gap-x-5 gap-y-2.5 py-3.5 text-[#EBDFCA]">
+    <span class="font-garamond tracking-seal text-[10px] uppercase text-[#B3A28A]">마당 · 시간</span>
+    <span id="clockDate" class="text-[15px] tracking-title"></span>
+    <span class="hidden h-4 w-px bg-[#55483B] sm:block"></span>
+    <div class="flex gap-2">
+      <button data-advance="1" class="rounded-full border border-[#6B5B4A] px-5 py-1.5 text-[12.5px] tracking-title transition-colors duration-300 hover:border-[#9C8669] hover:bg-[#3E3227]">+1일</button>
+      <button data-advance="7" class="rounded-full border border-[#6B5B4A] px-5 py-1.5 text-[12.5px] tracking-title transition-colors duration-300 hover:border-[#9C8669] hover:bg-[#3E3227]">+7일</button>
+      <button id="resetBtn" class="rounded-full border border-[#6B5B4A] px-5 py-1.5 text-[12.5px] tracking-title transition-colors duration-300 hover:border-[#B5765F] hover:bg-[#3E3227] hover:text-[#E8B49F]">처음부터</button>
+    </div>
+  </div>
+</div>
+
+<script src="intro-request.js"></script>
+<script>
+/*
+ * 앱 층. 규칙은 한 줄도 여기에 없다 — 전부 intro-request.js 에 있다.
+ * 여기가 하는 일: 그리기 / 클릭을 상태 기계 호출로 바꾸기 / 저장.
+ */
+(function () {
+  'use strict';
+
+  var IR  = window.IntroRequest;
+  var DAY = IR.DAY;
+
+  var SINGLE_ID   = 'single_me';
+  var SINGLE_NAME = '양경준';
+  var MATCHMAKERS = [
+    { id: 'mm_1', name: '김선영', rel: '대학 선배 · 기혼' },
+    { id: 'mm_2', name: '박지훈', rel: '전 직장 동료 · 기혼' },
+    { id: 'mm_3', name: '이수진', rel: '사촌 누나 · 기혼' }
+  ];
+  var KEY = 'ttu_intro_request_v1';
+
+  var state      = load();
+  var draft      = freshDraft();
+  var resetArmed = false;
+
+  /* ── 저장 ─────────────────────────────── */
+  function fresh() {
+    return { store: IR.createStore({ matchmakers: MATCHMAKERS }), now: Date.now(), activeMm: 'mm_1' };
+  }
+  function load() {
+    try {
+      var raw = localStorage.getItem(KEY);
+      if (raw) { var p = JSON.parse(raw); if (p && p.store && p.store.requests) return p; }
+    } catch (e) {}
+    return fresh();
+  }
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
+  function freshDraft() {
+    var c = {};
+    IR.FIELD_KEYS.forEach(function (k) { c[k] = { grade: 'any', value: null }; });
+    return { matchmakerId: null, conditions: c, note: '', editingId: null };
+  }
+
+  /* ── 도구 ─────────────────────────────── */
+  function esc(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+  function mmName(id) {
+    for (var i = 0; i < MATCHMAKERS.length; i++) if (MATCHMAKERS[i].id === id) return MATCHMAKERS[i].name;
+    return id;
+  }
+  function fmtDate(ms) {
+    var d = new Date(ms), w = ['일','월','화','수','목','금','토'][d.getDay()];
+    return d.getFullYear() + '. ' + String(d.getMonth()+1).padStart(2,'0') + '. ' +
+           String(d.getDate()).padStart(2,'0') + '. (' + w + ')';
+  }
+  function shortDate(ms) { return fmtDate(ms).slice(0, 12); }
+  function daysLeft(r) { return Math.max(0, Math.ceil((r.expiresAt - state.now) / DAY)); }
+  function mustCount() {
+    return IR.FIELD_KEYS.filter(function (k) { return draft.conditions[k].grade === 'must'; }).length;
+  }
+
+  function notice(msg) {
+    var el = document.getElementById('gateNotice');
+    if (!msg) { el.classList.add('hidden'); el.textContent = ''; return; }
+    el.classList.remove('hidden');
+    el.textContent = msg;
+    el.classList.remove('animate-nudge');
+    void el.offsetWidth;
+    el.classList.add('animate-nudge');
+  }
+
+  var toastTimer = null;
+  function toast(msg) {
+    var box = document.getElementById('toast');
+    document.getElementById('toastText').textContent = msg;
+    box.classList.remove('hide');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { box.classList.add('hide'); }, 2800);
+  }
+
+  var BLOCK_SHORT = {
+    DUPLICATE_ACTIVE:        '진행 중인 부탁 있음',
+    ACTIVE_LIMIT_REACHED:    '동시 3건을 다 썼습니다',
+    MATCHMAKER_WINDOW_LIMIT: '30일 2건 상한',
+    UNKNOWN_MATCHMAKER:      '연결되지 않음'
+  };
+
+  /* ── 그리기 ───────────────────────────── */
+  function render() {
+    state.store = IR.tick(state.store, state.now);
+    renderClock(); renderMatchmakers(); renderConditions(); renderNote();
+    renderSendBar(); renderMyList(); renderTabs(); renderInbox();
+    save();
+  }
+
+  function renderClock() {
+    document.getElementById('clockDate').textContent = fmtDate(state.now);
+    document.getElementById('resetBtn').textContent = resetArmed ? '정말 지울까요?' : '처음부터';
+  }
+
+  function renderMatchmakers() {
+    var left = IR.remainingSlots(state.store, SINGLE_ID, state.now);
+    document.getElementById('slotInfo').textContent = '남은 칸 ' + left + ' / ' + IR.RULES.maxActiveRequests;
+
+    var editing = !!draft.editingId;
+
+    document.getElementById('mmRow').innerHTML = MATCHMAKERS.map(function (m) {
+      var gate    = IR.canSend(state.store, SINGLE_ID, m.id, state.now);
+      var blocked = !gate.ok;
+      var sub     = m.rel;
+
+      if (blocked) {
+        if (gate.error === 'COOLDOWN_ACTIVE') {
+          var mt = gate.message.match(/(\d+)일 남았습니다/);
+          sub = mt ? mt[1] + '일 뒤에 다시' : '쿨다운 중';
+        } else {
+          sub = BLOCK_SHORT[gate.error] || '지금은 어려움';
+        }
+      }
+
+      var on       = draft.matchmakerId === m.id;
+      var disabled = editing ? true : blocked;
+
+      // 높이를 고정한다. 선택했다고 카드가 커지면 아래 폼이 통째로 밀린다.
+      var cls = 'group relative flex min-h-[116px] w-full flex-col items-center justify-center overflow-hidden ' +
+                'rounded-[3px] border px-4 py-4 text-center transition-all duration-300 ';
+      if (on) {
+        cls += 'border-wooddk/60 bg-gradient-to-b from-[#BC8B5B] to-[#94633C] text-[#FDF6E8] shadow-lift';
+      } else if (disabled) {
+        cls += 'cursor-not-allowed border-line bg-ivory/50 text-ink3 opacity-60';
+      } else {
+        cls += 'border-line bg-ivory text-ink hover:-translate-y-0.5 hover:border-wood/60 hover:bg-[#F4EDDE] hover:shadow-lift';
+      }
+
+      var check = on
+        ? '<span class="animate-pop absolute right-2.5 top-2.5 flex h-5 w-5 items-center justify-center rounded-full bg-seal text-[10px] text-[#FBF0E6]">✓</span>'
+        : '';
+
+      return '<button type="button" data-mm="' + m.id + '" class="' + cls + '"' + (disabled ? ' disabled' : '') + '>' +
+               check +
+               '<span class="block text-[15.5px] tracking-title">' + esc(m.name) + '</span>' +
+               '<span class="mt-1.5 block text-[11px] ' + (on ? 'text-[#F0DFC4]' : 'text-ink3') + '">' + esc(sub) + '</span>' +
+               '<span class="mt-2 inline-block rounded-full px-3 py-0.5 text-[10px] tracking-title ' +
+                 (on ? 'animate-pop bg-black/18 text-[#FBF0E6]' : 'invisible') + '">선택됨</span>' +
+             '</button>';
+    }).join('');
+  }
+
+  var GRADE_ON = {
+    must:   'bg-seal text-[#FBF0E6]',
+    prefer: 'bg-pine text-[#F2F4EE]',
+    any:    'bg-ink text-[#F7F1E4]'
+  };
+
+  function renderConditions() {
+    document.getElementById('condList').innerHTML = IR.FIELDS.map(function (f) {
+      var e = draft.conditions[f.key];
+
+      var grades = [['must','필수'],['prefer','선호'],['any','상관없음']].map(function (g) {
+        var on  = e.grade === g[0];
+        var cls = 'flex-1 border-r border-line/70 py-2 text-[12px] transition-colors duration-300 last:border-r-0 ' +
+                  (on ? GRADE_ON[g[0]] : 'bg-[#FBF7EC] text-ink2 hover:bg-ivory');
+        return '<button type="button" data-grade="' + g[0] + '" class="' + cls + '">' + g[1] + '</button>';
+      }).join('');
+
+      var opts = f.options.map(function (o) {
+        return '<option value="' + esc(o) + '"' + (e.value === o ? ' selected' : '') + '>' + esc(o) + '</option>';
+      }).join('');
+
+      var isAny = e.grade === 'any';
+
+      return '<div class="cond grid grid-cols-[88px_1fr] items-center gap-x-3 gap-y-2 border-b border-dotted border-line py-3 last:border-b-0 sm:grid-cols-[96px_1fr_150px]" data-field="' + f.key + '">' +
+               '<span class="text-[13px] text-ink2">' + esc(f.label) + '</span>' +
+               '<div class="flex overflow-hidden rounded-sm border border-line">' + grades + '</div>' +
+               '<select data-value-for="' + f.key + '"' + (isAny ? ' disabled' : '') +
+                 ' class="hanok col-span-2 w-full rounded-sm border border-line bg-[#FFFEFB] px-3 py-2 text-[12.5px] text-ink outline-none transition-colors duration-300 focus:border-wood/70 disabled:bg-ivory/60 disabled:text-ink3/60 sm:col-span-1">' +
+                 (isAny ? '<option>—</option>' : opts) +
+               '</select>' +
+             '</div>';
+    }).join('');
+
+    var n = mustCount(), pips = '';
+    for (var i = 0; i < IR.RULES.maxMust; i++) {
+      pips += '<span class="inline-block h-2 w-2 rounded-full ' +
+              (i < n ? 'bg-seal' : 'border border-line2') + '"></span>';
+    }
+    document.getElementById('mustMeter').innerHTML =
+      pips + '<span class="ml-1 font-garamond tracking-wider">필수 ' + n + ' / ' + IR.RULES.maxMust + '</span>';
+  }
+
+  function renderNote() {
+    var box = document.getElementById('note');
+    if (box.value !== draft.note) box.value = draft.note;
+    document.getElementById('noteCount').textContent = draft.note.length + ' / ' + IR.RULES.maxNoteLength;
+  }
+
+  function renderSendBar() {
+    var editing = !!draft.editingId;
+    var btn = document.getElementById('sendBtn');
+    btn.textContent = editing ? '수정 저장' : '부탁 보내기';
+    btn.disabled    = !draft.matchmakerId;
+    document.getElementById('cancelEditBtn').classList.toggle('hidden', !editing);
+  }
+
+  function badges(r, withPrefer) {
+    var h = IR.mustConditions(r).map(function (c) {
+      return '<span class="rounded-sm border border-seal/70 bg-sealsoft px-2.5 py-1 text-[11.5px] text-seal">' +
+             esc(c.label) + ' · ' + esc(c.value) + '</span>';
+    }).join('');
+    if (withPrefer) {
+      h += IR.preferConditions(r).map(function (c) {
+        return '<span class="rounded-sm border border-pine/50 bg-[#F1F4EC] px-2.5 py-1 text-[11.5px] text-pine">' +
+               esc(c.label) + ' · ' + esc(c.value) + '</span>';
+      }).join('');
+    }
+    return '<div class="flex flex-wrap gap-1.5">' + h + '</div>';
+  }
+
+  function pill(r, forSingle) {
+    var label = forSingle ? IR.singleLabel(r) : IR.matchmakerLabel(r);
+    var cls = 'shrink-0 rounded-full border px-3 py-1 text-[11px] tracking-title ';
+    if (r.state === 'closed')             cls += 'border-dashed border-line2 bg-ivory/60 text-ink3';
+    else if (r.state === 'accepted')      cls += 'border-pine/60 bg-[#F1F4EC] text-pine';
+    else if (!forSingle && !r.readAt)     cls += 'border-seal/70 bg-sealsoft text-seal';
+    else                                  cls += 'border-line2 bg-ivory text-ink2';
+    return '<span class="' + cls + '">' + esc(label) + '</span>';
+  }
+
+  function card(inner, closed) {
+    return '<article class="rounded-[3px] border px-5 py-4 transition-colors duration-300 ' +
+           (closed ? 'border-dashed border-line2 bg-ivory/45' : 'border-line bg-[#FFFEFB] hover:border-line2') +
+           '">' + inner + '</article>';
+  }
+
+  var BTN_GHOST = 'rounded-full border border-line2 px-4 py-1.5 text-[12px] text-ink2 transition-colors duration-300 hover:border-wood/60 hover:bg-ivory hover:text-ink';
+  var BTN_SOLID = 'rounded-full border border-wooddk/50 bg-gradient-to-b from-[#B9854F] to-[#96612F] px-4 py-1.5 text-[12px] text-[#FDF6E7] transition-all duration-300 hover:from-[#C9955C] hover:to-[#A56C36]';
+
+  /* 왼쪽: 내가 보낸 부탁 */
+  function renderMyList() {
+    var mine = state.store.requests
+      .filter(function (r) { return r.singleId === SINGLE_ID; })
+      .sort(function (a, b) {
+        var act = (IR.isActive(b) ? 1 : 0) - (IR.isActive(a) ? 1 : 0);
+        return act !== 0 ? act : b.createdAt - a.createdAt;
+      });
+
+    if (!mine.length) {
+      document.getElementById('myList').innerHTML =
+        '<p class="rounded-[3px] border border-dashed border-line py-10 text-center text-[12.5px] text-ink3">아직 보낸 부탁이 없습니다.</p>';
+      return;
+    }
+
+    document.getElementById('myList').innerHTML = mine.map(function (r) {
+      var closed  = r.state === 'closed';
+      var canEdit = r.state === 'sent' && !r.readAt;
+
+      var acts = '';
+      if (IR.isActive(r)) {
+        if (canEdit) acts += '<button class="' + BTN_GHOST + '" data-edit="' + r.id + '">고치기</button>';
+        acts += '<button class="' + BTN_GHOST + '" data-cancel="' + r.id + '">부탁 거두기</button>';
+      }
+
+      // 싱글에게는 closedReason 을 보여주지 않는다. 종료와 만료가 구분되면 안 된다.
+      var meta = closed
+        ? '보낸 날 ' + shortDate(r.createdAt) + ' · 닫힌 날 ' + shortDate(r.closedAt)
+        : '보낸 날 ' + shortDate(r.createdAt) + ' · 앞으로 ' + daysLeft(r) + '일';
+
+      return card(
+        '<div class="mb-3 flex items-center justify-between gap-3">' +
+          '<span class="text-[14.5px] tracking-title">' + esc(mmName(r.matchmakerId)) + ' 님께</span>' +
+          pill(r, true) +
+        '</div>' +
+        badges(r, true) +
+        (r.note ? '<p class="mt-3 border-l-2 border-line pl-3 text-[12.5px] leading-7 text-ink2">' + esc(r.note) + '</p>' : '') +
+        '<p class="mt-3 font-garamond text-[11.5px] tracking-wider text-ink3">' + esc(meta) + '</p>' +
+        (acts ? '<div class="mt-3.5 flex flex-wrap gap-2">' + acts + '</div>' : ''),
+        closed);
+    }).join('');
+  }
+
+  /* 오른쪽: 주선자 */
+  function renderTabs() {
+    document.getElementById('mmTabs').innerHTML = MATCHMAKERS.map(function (m) {
+      var open = IR.inboxOf(state.store, m.id, state.now).filter(IR.isActive).length;
+      var on   = state.activeMm === m.id;
+      var cls  = 'rounded-t-sm border border-b-2 px-2 py-2.5 text-[13px] tracking-title transition-colors duration-300 ' +
+                 (on ? 'border-line border-b-wood bg-white text-ink'
+                     : 'border-line border-b-line bg-[#FBF7EC] text-ink2 hover:bg-ivory');
+      return '<button data-tab="' + m.id + '" class="' + cls + '">' + esc(m.name) +
+             '<span class="ml-1.5 font-garamond text-[11px] ' + (open ? 'text-seal' : 'text-ink3') + '">' + open + '</span></button>';
+    }).join('');
+  }
+
+  function renderInbox() {
+    var items = IR.inboxOf(state.store, state.activeMm, state.now).sort(function (a, b) {
+      var act = (IR.isActive(b) ? 1 : 0) - (IR.isActive(a) ? 1 : 0);
+      return act !== 0 ? act : b.createdAt - a.createdAt;
+    });
+
+    if (!items.length) {
+      document.getElementById('inbox').innerHTML =
+        '<p class="rounded-[3px] border border-dashed border-line py-14 text-center text-[12.5px] text-ink3">받은 소개 부탁이 없습니다.</p>';
+      return;
+    }
+
+    document.getElementById('inbox').innerHTML = items.map(function (r) {
+      var read   = !!r.readAt;
+      var closed = r.state === 'closed';
+
+      var acts = [];
+      if (r.state === 'sent' || r.state === 'held') acts.push(['accept', '찾아볼게요', true]);
+      if (r.state === 'sent')                       acts.push(['hold',   '조금 뒤에', false]);
+      if (IR.isActive(r))                           acts.push(['decline','이번엔 어렵겠어요', false]);
+
+      var actHtml = acts.map(function (a) {
+        return '<button class="' + (a[2] ? BTN_SOLID : BTN_GHOST) + '" data-act="' + a[0] + '" data-id="' + r.id + '">' + a[1] + '</button>';
+      }).join('');
+
+      // 주선자는 자기가 한 행동이므로 이유를 봐도 된다. 숨기는 쪽은 싱글이다.
+      var closedText = { declined:'내가 종료했습니다', expired:'기한이 지나 닫혔습니다', cancelled:'상대가 부탁을 거두었습니다' }[r.closedReason];
+
+      var body = read
+        ? badges(r, true) + (r.note ? '<p class="mt-3 border-l-2 border-line pl-3 text-[12.5px] leading-7 text-ink2">' + esc(r.note) + '</p>' : '')
+        : badges(r, false) +
+          '<p class="mt-3 rounded-sm border border-dashed border-line bg-ivory/50 px-3.5 py-2.5 text-[11.5px] leading-6 text-ink3">' +
+            '양보 가능한 조건과 한마디는 열어본 뒤에 보입니다.<br>열어보면 상대는 더 이상 내용을 고칠 수 없습니다.' +
+          '</p>';
+
+      var meta = closed
+        ? esc(closedText) + ' · ' + shortDate(r.closedAt)
+        : '받은 날 ' + shortDate(r.createdAt) + ' · 앞으로 ' + daysLeft(r) + '일';
+
+      var openBtn = (!read && IR.isActive(r))
+        ? '<button class="' + BTN_GHOST + '" data-act="read" data-id="' + r.id + '">열어보기</button>' : '';
+
+      return card(
+        '<div class="mb-3 flex items-center justify-between gap-3">' +
+          '<span class="text-[14.5px] tracking-title">' + esc(SINGLE_NAME) + ' 님의 부탁</span>' +
+          pill(r, false) +
+        '</div>' +
+        body +
+        '<p class="mt-3 font-garamond text-[11.5px] tracking-wider text-ink3">' + meta + '</p>' +
+        (openBtn || actHtml ? '<div class="mt-3.5 flex flex-wrap gap-2">' + openBtn + actHtml + '</div>' : ''),
+        closed);
+    }).join('');
+  }
+
+  /* ── 이벤트 ───────────────────────────── */
+  function apply(result, okMsg) {
+    if (!result.ok) { notice(result.message); render(); return false; }
+    state.store = result.store;
+    notice('');
+    render();
+    if (okMsg) toast(okMsg);
+    return true;
+  }
+
+  document.addEventListener('click', function (ev) {
+    var el = ev.target.closest('button');
+    if (!el) return;
+
+    if (el.dataset.mm) {
+      draft.matchmakerId = draft.matchmakerId === el.dataset.mm ? null : el.dataset.mm;
+      notice(''); render(); return;
+    }
+
+    if (el.dataset.grade) {
+      var key  = el.closest('.cond').dataset.field;
+      var e    = draft.conditions[key];
+      var next = el.dataset.grade;
+
+      if (next === 'must' && e.grade !== 'must' && mustCount() >= IR.RULES.maxMust) {
+        notice('필수 조건은 최대 ' + IR.RULES.maxMust + '개입니다. 하나를 "선호"로 내려놓아야 새로 고를 수 있습니다. ' +
+               '— 무엇을 양보할지 고르는 일이 이 기능의 핵심입니다.');
+        return;
+      }
+      e.grade = next;
+      if (next === 'any') e.value = null;
+      else if (!e.value)  e.value = IR.fieldOptions(key)[0];
+      notice(''); render(); return;
+    }
+
+    if (el.dataset.tab) { state.activeMm = el.dataset.tab; render(); return; }
+
+    if (el.id === 'sendBtn') {
+      if (!draft.matchmakerId) { notice('부탁을 건넬 주선자를 한 분 골라 주세요.'); return; }
+      var payload = {
+        singleId: SINGLE_ID, matchmakerId: draft.matchmakerId,
+        conditions: draft.conditions, note: draft.note
+      };
+      var ok = draft.editingId
+        ? apply(IR.edit(state.store, draft.editingId, payload, state.now), '부탁을 고쳤습니다')
+        : apply(IR.send(state.store, payload, state.now), mmName(draft.matchmakerId) + ' 님께 부탁이 전해졌습니다');
+      if (ok) { draft = freshDraft(); render(); }
+      return;
+    }
+
+    if (el.id === 'cancelEditBtn') { draft = freshDraft(); notice(''); render(); return; }
+
+    if (el.dataset.cancel) { apply(IR.cancel(state.store, el.dataset.cancel, state.now), '부탁을 거두었습니다'); return; }
+
+    if (el.dataset.edit) {
+      var t = state.store.requests.filter(function (r) { return r.id === el.dataset.edit; })[0];
+      if (!t) return;
+      draft = {
+        matchmakerId: t.matchmakerId,
+        conditions: JSON.parse(JSON.stringify(t.conditions)),
+        note: t.note, editingId: t.id
+      };
+      notice(''); render();
+      document.getElementById('gate').scrollIntoView({ behavior:'smooth', block:'start' });
+      return;
+    }
+
+    if (el.dataset.act) {
+      var msg = { read:null, accept:'찾아보겠다고 전했습니다', hold:'보류했습니다 — 기한이 7일 늘었습니다', decline:'부탁을 종료했습니다' }[el.dataset.act];
+      var fn  = { read:IR.markRead, accept:IR.accept, hold:IR.hold, decline:IR.decline }[el.dataset.act];
+      apply(fn(state.store, el.dataset.id, state.now), msg);
+      return;
+    }
+
+    if (el.dataset.advance) {
+      var n = Number(el.dataset.advance);
+      state.now += n * DAY;
+      resetArmed = false; notice(''); render();
+      toast('시간이 ' + n + '일 흘렀습니다');
+      return;
+    }
+
+    if (el.id === 'resetBtn') {
+      if (!resetArmed) { resetArmed = true; renderClock(); return; }
+      resetArmed = false;
+      state = fresh(); draft = freshDraft();
+      notice(''); render(); toast('처음으로 되돌렸습니다');
+      return;
+    }
+  });
+
+  document.addEventListener('change', function (ev) {
+    var field = ev.target.dataset && ev.target.dataset.valueFor;
+    if (!field) return;
+    draft.conditions[field].value = ev.target.value;
+    save();
+  });
+
+  document.addEventListener('input', function (ev) {
+    if (ev.target.id !== 'note') return;
+    draft.note = ev.target.value;
+    document.getElementById('noteCount').textContent = draft.note.length + ' / ' + IR.RULES.maxNoteLength;
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>
