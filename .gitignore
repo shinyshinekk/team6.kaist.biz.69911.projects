@@ -1,0 +1,6 @@
+node_modules/
+.env
+.env.*
+!.env.example
+prototypes/gyunggoo/.data/
+prototypes/gyunggoo/*.local.json
