@@ -1,0 +1,454 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>뚜 짝 후보 메모</title>
+<!-- 스펙: docs/specs/shine-exploration-reward.md -->
+<style>
+  :root {
+    --bg: #f6f3ef;
+    --surface: #ffffff;
+    --ink: #2a2622;
+    --muted: #7a716a;
+    --line: #e6dfd7;
+    --accent: #d2555a;
+    --accent-soft: #fbe9e9;
+    --point: #b7791f;
+    --point-soft: #fdf3e1;
+    --disabled: #c9c2bb;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .06);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1c1a18;
+      --surface: #26231f;
+      --ink: #efe9e3;
+      --muted: #a69d95;
+      --line: #3a3530;
+      --accent: #ec7a7e;
+      --accent-soft: #3a2526;
+      --point: #e4b15c;
+      --point-soft: #3a2f1c;
+      --disabled: #514a44;
+      --shadow: none;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+    font-size: 15px;
+    line-height: 1.5;
+  }
+  .app { max-width: 440px; margin: 0 auto; padding: 0 16px 48px; }
+
+  header {
+    position: sticky; top: 0; z-index: 5;
+    background: var(--bg);
+    padding: 14px 0 10px;
+    border-bottom: 1px solid var(--line);
+  }
+  .head-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  h1 { font-size: 17px; margin: 0; }
+  .sub { color: var(--muted); font-size: 13px; margin: 2px 0 0; }
+  .points {
+    display: flex; align-items: center; gap: 6px;
+    background: var(--point-soft); color: var(--point);
+    border-radius: 999px; padding: 6px 8px 6px 14px;
+    font-weight: 700; white-space: nowrap;
+  }
+  .info-btn {
+    width: 24px; height: 24px; border-radius: 50%;
+    border: 1px solid currentColor; background: transparent; color: inherit;
+    font-size: 13px; font-weight: 700; cursor: pointer; padding: 0;
+  }
+  .info {
+    margin-top: 10px; padding: 12px 14px;
+    background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
+    font-size: 13px; color: var(--muted);
+  }
+  .info ul { margin: 0; padding-left: 18px; }
+  .info li + li { margin-top: 4px; }
+
+  h2 { font-size: 15px; margin: 22px 0 10px; }
+  h2 .count { color: var(--muted); font-weight: 400; }
+
+  .friends { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .friend {
+    text-align: left; font: inherit; color: inherit;
+    background: var(--surface); border: 2px solid transparent; border-radius: 14px;
+    box-shadow: var(--shadow); padding: 12px; cursor: pointer;
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .friend[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
+  .friend-top { display: flex; align-items: center; gap: 8px; }
+  .avatar {
+    flex: none; width: 34px; height: 34px; border-radius: 50%;
+    display: grid; place-items: center;
+    color: #fff; font-weight: 700; font-size: 14px;
+  }
+  .name { font-weight: 700; }
+  .meta { color: var(--muted); font-size: 12px; }
+  .tags { display: flex; flex-wrap: wrap; gap: 4px; }
+  .tag { font-size: 11px; padding: 2px 7px; border-radius: 999px; background: var(--bg); color: var(--muted); }
+  .bio { font-size: 13px; }
+  .hint { color: var(--muted); font-size: 13px; margin: 8px 0 0; min-height: 1.5em; }
+  .hint.warn { color: var(--accent); }
+
+  .composer {
+    margin-top: 14px; padding: 14px;
+    background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
+  }
+  .composer-pair { font-weight: 700; margin: 0 0 8px; }
+  .composer-note { font-size: 12px; color: var(--point); margin: -4px 0 8px; }
+  textarea {
+    width: 100%; min-height: 64px; resize: vertical;
+    font: inherit; color: var(--ink); background: var(--bg);
+    border: 1px solid var(--line); border-radius: 10px; padding: 10px;
+  }
+  textarea:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+  .row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 8px; }
+  .counter { font-size: 12px; color: var(--muted); }
+  .counter.ok { color: var(--point); }
+  .btn {
+    font: inherit; font-weight: 700; cursor: pointer;
+    border: 0; border-radius: 10px; padding: 9px 14px;
+    background: var(--accent); color: #fff;
+  }
+  .btn:disabled { background: var(--disabled); color: var(--muted); cursor: not-allowed; }
+  .btn.ghost { background: transparent; color: var(--muted); border: 1px solid var(--line); }
+  .btn.small { padding: 6px 10px; font-size: 13px; }
+
+  .pairs { display: flex; flex-direction: column; gap: 10px; }
+  .pair {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px;
+  }
+  .pair-names { font-weight: 700; }
+  .pair-reason { margin: 6px 0 0; white-space: pre-wrap; word-break: break-word; }
+  .pair-actions { display: flex; gap: 6px; justify-content: flex-end; margin-top: 8px; }
+  .next-steps {
+    margin-top: 10px; padding: 8px 10px; border-radius: 10px;
+    border: 1px dashed var(--line); color: var(--muted); font-size: 12px;
+    opacity: .75; user-select: none;
+  }
+  .next-steps strong { display: block; color: var(--muted); font-weight: 700; margin-top: 2px; }
+  .empty { color: var(--muted); font-size: 13px; text-align: center; padding: 18px 0; }
+
+  .footer { margin-top: 28px; text-align: center; }
+
+  .toast {
+    position: fixed; left: 50%; bottom: 32px; transform: translate(-50%, 20px);
+    background: var(--ink); color: var(--bg);
+    padding: 10px 18px; border-radius: 999px; font-weight: 700;
+    opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s;
+    max-width: calc(100% - 32px); text-align: center;
+  }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
+  .toast.reward { background: var(--point); color: #fff; font-size: 18px; }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="head-row">
+      <div>
+        <h1>이 둘은 어떨까?</h1>
+        <p class="sub">친구 두 명을 골라 짝 후보로 메모해 보세요</p>
+      </div>
+      <div class="points" aria-live="polite">
+        <span id="points">0P</span>
+        <button class="info-btn" id="info-btn" type="button" aria-expanded="false" aria-controls="info" aria-label="포인트 안내">i</button>
+      </div>
+    </div>
+  </header>
+  <div class="info" id="info" hidden>
+      <ul>
+        <li>새로운 짝 후보를 처음 저장하면 +10P가 쌓여요. 같은 두 사람은 한 번만 쌓이고, 메모를 고쳐도 늘지 않아요.</li>
+        <li>1P = 1원으로 가정한 체험용 포인트이며, 실제 사용·환전은 불가합니다.</li>
+        <li>친구 정보는 모두 가상 데이터입니다.</li>
+        <li>짝 후보 메모는 나만 볼 수 있는 비공개 초안입니다. 저장해도 친구에게 알림이 가거나 소개가 시작되지 않습니다.</li>
+        <li>메모는 현재 브라우저에만 저장되며 외부로 전송되지 않습니다.</li>
+      </ul>
+  </div>
+
+  <h2>싱글 친구 <span class="count">6명</span></h2>
+  <div class="friends" id="friends"></div>
+  <p class="hint" id="select-hint"></p>
+
+  <section class="composer" id="composer" hidden>
+    <p class="composer-pair" id="composer-pair"></p>
+    <p class="composer-note" id="composer-note" hidden>이미 저장한 조합이에요. 저장하면 메모만 수정돼요.</p>
+    <label for="reason" class="meta">어울릴 것 같은 이유 한 줄</label>
+    <textarea id="reason" maxlength="200" placeholder="예) 둘 다 주말마다 등산을 다녀요"></textarea>
+    <div class="row">
+      <span class="counter" id="counter">0 / 10자 이상</span>
+      <button class="btn" id="save" type="button" disabled>짝 후보로 저장</button>
+    </div>
+    <p class="hint" id="reason-hint">어울릴 것 같은 이유를 10자 이상 적어 주세요.</p>
+  </section>
+
+  <h2>내 짝 후보 <span class="count" id="pair-count">0개</span></h2>
+  <div class="pairs" id="pairs"></div>
+
+  <div class="footer">
+    <button class="btn ghost small" id="reset" type="button">체험 초기화</button>
+  </div>
+</div>
+<div class="toast" id="toast" role="status"></div>
+
+<script src="reward.js"></script>
+<script>
+(function () {
+  'use strict';
+  var R = window.ShineReward;
+  var KEY = 'ttu-shine-exploration-reward-v1';
+
+  /* 가상 싱글 친구 6명 (실제 인물 아님) */
+  var FRIENDS = [
+    { id: 'f1', name: '서지우', age: 32, job: 'UX 디자이너', region: '서울 성수', tags: ['등산', '전시', '필름카메라'], bio: '주말엔 산이나 미술관에 있어요.', color: '#d2555a' },
+    { id: 'f2', name: '한도윤', age: 34, job: '연구원', region: '대전', tags: ['등산', '보드게임'], bio: '조용한데 친해지면 말이 많아요.', color: '#4f7cac' },
+    { id: 'f3', name: '오하린', age: 30, job: '초등 교사', region: '경기 분당', tags: ['베이킹', '여행', '고양이'], bio: '방학마다 혼자 여행을 떠나요.', color: '#5a9b6e' },
+    { id: 'f4', name: '정민재', age: 33, job: '회계사', region: '서울 여의도', tags: ['러닝', '와인'], bio: '평일 저녁엔 한강을 달려요.', color: '#b7791f' },
+    { id: 'f5', name: '윤소희', age: 31, job: '마케터', region: '서울 망원', tags: ['러닝', '맛집', '재즈'], bio: '새로 생긴 맛집은 꼭 가 봐요.', color: '#8a5fb0' },
+    { id: 'f6', name: '임태오', age: 35, job: '스타트업 개발자', region: '경기 판교', tags: ['캠핑', '요리', '보드게임'], bio: '캠핑 가서 요리하는 게 낙이에요.', color: '#3f8f95' }
+  ];
+  var byId = {};
+  FRIENDS.forEach(function (f) { byId[f.id] = f; });
+
+  var store = load();
+  var selected = [];   // 선택 순서대로 친구 id
+  var editingKey = null;
+  var resetArmed = false;
+
+  var $ = function (id) { return document.getElementById(id); };
+  var els = {
+    points: $('points'), infoBtn: $('info-btn'), info: $('info'),
+    friends: $('friends'), selectHint: $('select-hint'),
+    composer: $('composer'), composerPair: $('composer-pair'), composerNote: $('composer-note'),
+    reason: $('reason'), counter: $('counter'), save: $('save'), reasonHint: $('reason-hint'),
+    pairs: $('pairs'), pairCount: $('pair-count'), reset: $('reset'), toast: $('toast')
+  };
+
+  function load() {
+    try { return R.parseStore(localStorage.getItem(KEY)); } catch (e) { return R.emptyStore(); }
+  }
+  function persist() {
+    try { localStorage.setItem(KEY, JSON.stringify(store)); } catch (e) {}
+  }
+
+  function el(tag, cls, text) {
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text != null) n.textContent = text;
+    return n;
+  }
+  function pairNames(ids) { return byId[ids[0]].name + ' × ' + byId[ids[1]].name; }
+
+  var toastTimer = null;
+  function toast(text, isReward) {
+    els.toast.textContent = text;
+    els.toast.className = 'toast show' + (isReward ? ' reward' : '');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { els.toast.className = 'toast'; }, isReward ? 1400 : 2200);
+  }
+
+  /* ── 친구 목록 ─────────────────────────────── */
+  function renderFriends() {
+    els.friends.innerHTML = '';
+    FRIENDS.forEach(function (f) {
+      var card = el('button', 'friend');
+      card.type = 'button';
+      card.dataset.id = f.id;
+      card.setAttribute('aria-pressed', selected.indexOf(f.id) >= 0 ? 'true' : 'false');
+
+      var top = el('div', 'friend-top');
+      var av = el('span', 'avatar', f.name.charAt(0));
+      av.style.background = f.color;
+      av.setAttribute('aria-hidden', 'true');
+      var who = el('div');
+      who.appendChild(el('div', 'name', f.name));
+      who.appendChild(el('div', 'meta', f.age + '세 · ' + f.job));
+      top.appendChild(av); top.appendChild(who);
+      card.appendChild(top);
+      card.appendChild(el('div', 'meta', f.region));
+      var tags = el('div', 'tags');
+      f.tags.forEach(function (t) { tags.appendChild(el('span', 'tag', t)); });
+      card.appendChild(tags);
+      card.appendChild(el('div', 'bio', f.bio));
+
+      card.addEventListener('click', function () { toggle(f.id); });
+      els.friends.appendChild(card);
+    });
+  }
+
+  function toggle(id) {
+    var i = selected.indexOf(id);
+    if (i >= 0) {
+      selected.splice(i, 1);
+      setSelectHint('');
+    } else if (selected.length >= 2) {
+      setSelectHint('두 명까지 고를 수 있어요. 바꾸려면 먼저 한 명을 해제해 주세요.', true);
+      return;
+    } else {
+      selected.push(id);
+      setSelectHint('');
+    }
+    renderFriends();
+    renderComposer(true);
+  }
+
+  function setSelectHint(text, warn) {
+    els.selectHint.textContent = text || (selected.length === 1 ? '한 명 더 골라 주세요.' : '');
+    els.selectHint.className = 'hint' + (warn ? ' warn' : '');
+  }
+
+  /* ── 이유 입력 ─────────────────────────────── */
+  function renderComposer(prefill) {
+    if (selected.length !== 2) {
+      els.composer.hidden = true;
+      if (!els.selectHint.classList.contains('warn')) setSelectHint('');
+      return;
+    }
+    els.composer.hidden = false;
+    els.composerPair.textContent = pairNames(selected);
+    var existing = R.findPair(store, R.pairKey(selected[0], selected[1]));
+    els.composerNote.hidden = !existing;
+    els.save.textContent = existing ? '메모 수정' : '짝 후보로 저장';
+    if (prefill) els.reason.value = existing ? existing.reason : '';
+    renderCounter();
+  }
+
+  function renderCounter() {
+    var n = R.reasonLength(els.reason.value);
+    var ok = R.isReasonValid(els.reason.value);
+    els.counter.textContent = n + ' / ' + R.RULES.minReasonLength + '자 이상';
+    els.counter.className = 'counter' + (ok ? ' ok' : '');
+    els.save.disabled = !ok;
+    els.reasonHint.hidden = ok;
+  }
+
+  function save() {
+    var r = R.savePair(store, selected[0], selected[1], els.reason.value, Date.now());
+    if (!r.ok) { els.reasonHint.textContent = r.message; els.reasonHint.hidden = false; return; }
+    store = r.store;
+    persist();
+    if (r.rewarded) toast('+' + r.points + 'P', true);
+    else toast('메모를 수정했어요 (이미 포인트를 받은 조합이에요)');
+    selected = [];
+    els.reason.value = '';
+    renderAll();
+  }
+
+  /* ── 저장된 짝 후보 ───────────────────────── */
+  function renderPairs() {
+    els.pairs.innerHTML = '';
+    els.pairCount.textContent = store.pairs.length + '개';
+    if (!store.pairs.length) {
+      els.pairs.appendChild(el('p', 'empty', '아직 저장한 짝 후보가 없어요.'));
+      return;
+    }
+    store.pairs.slice().reverse().forEach(function (p) {
+      var card = el('article', 'pair');
+      card.dataset.key = p.pairKey;
+      card.appendChild(el('div', 'pair-names', pairNames(p.friendIds)));
+
+      if (editingKey === p.pairKey) {
+        var ta = el('textarea');
+        ta.value = p.reason;
+        ta.maxLength = 200;
+        ta.setAttribute('aria-label', '이유 수정');
+        var row = el('div', 'row');
+        var cnt = el('span', 'counter');
+        var actions = el('div', 'pair-actions');
+        var cancel = el('button', 'btn ghost small', '취소');
+        var ok = el('button', 'btn small', '수정 저장');
+        cancel.type = ok.type = 'button';
+        var sync = function () {
+          var valid = R.isReasonValid(ta.value);
+          cnt.textContent = R.reasonLength(ta.value) + ' / ' + R.RULES.minReasonLength + '자 이상';
+          cnt.className = 'counter' + (valid ? ' ok' : '');
+          ok.disabled = !valid;
+        };
+        ta.addEventListener('input', sync);
+        cancel.addEventListener('click', function () { editingKey = null; renderPairs(); });
+        ok.addEventListener('click', function () {
+          var r = R.updateReason(store, p.pairKey, ta.value, Date.now());
+          if (!r.ok) return;
+          store = r.store;
+          persist();
+          editingKey = null;
+          toast('메모를 수정했어요 (이미 포인트를 받은 조합이에요)');
+          renderAll();
+        });
+        actions.appendChild(cancel); actions.appendChild(ok);
+        row.appendChild(cnt); row.appendChild(actions);
+        card.appendChild(ta); card.appendChild(row);
+        sync();
+        setTimeout(function () { ta.focus(); }, 0);
+      } else {
+        card.appendChild(el('p', 'pair-reason', p.reason));
+        var acts = el('div', 'pair-actions');
+        var edit = el('button', 'btn ghost small', '메모 수정');
+        edit.type = 'button';
+        edit.addEventListener('click', function () { editingKey = p.pairKey; renderPairs(); });
+        acts.appendChild(edit);
+        card.appendChild(acts);
+      }
+
+      var next = el('div', 'next-steps');
+      next.setAttribute('aria-disabled', 'true');
+      next.appendChild(document.createTextNode('다음 단계: 추천사 작성 +100P · 연결 +50P · 약속 +50P'));
+      next.appendChild(el('strong', null, '컨셉 예시 · 이번 체험에서는 미동작'));
+      card.appendChild(next);
+
+      els.pairs.appendChild(card);
+    });
+  }
+
+  function renderPoints() { els.points.textContent = store.totalPoints + 'P'; }
+
+  function renderAll() {
+    renderPoints();
+    renderFriends();
+    renderComposer(false);
+    renderPairs();
+    setSelectHint('');
+  }
+
+  /* ── 이벤트 ───────────────────────────────── */
+  els.infoBtn.addEventListener('click', function () {
+    var open = els.info.hidden;
+    els.info.hidden = !open;
+    els.infoBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  });
+  els.reason.addEventListener('input', renderCounter);
+  els.save.addEventListener('click', save);
+
+  /* 실수로 지우지 않도록 두 번 눌러야 초기화된다 */
+  var resetTimer = null;
+  els.reset.addEventListener('click', function () {
+    if (!resetArmed) {
+      resetArmed = true;
+      els.reset.textContent = '한 번 더 누르면 모두 지워져요';
+      clearTimeout(resetTimer);
+      resetTimer = setTimeout(function () { resetArmed = false; els.reset.textContent = '체험 초기화'; }, 3000);
+      return;
+    }
+    clearTimeout(resetTimer);
+    resetArmed = false;
+    els.reset.textContent = '체험 초기화';
+    store = R.emptyStore();
+    try { localStorage.removeItem(KEY); } catch (e) {}
+    selected = []; editingKey = null; els.reason.value = '';
+    renderAll();
+    toast('체험을 처음 상태로 되돌렸어요');
+  });
+
+  renderAll();
+})();
+</script>
+</body>
+</html>
