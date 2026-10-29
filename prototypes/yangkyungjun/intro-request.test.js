@@ -1,5 +1,5 @@
 /*
- * intro-request.test.js — 스펙의 checks 22개
+ * intro-request.test.js — 스펙의 checks 24개
  *
  * 실행:  node --test
  * 설치할 것 없음(Node 내장 test runner).
@@ -333,5 +333,55 @@ describe('가시성', () => {
     assert.equal(declined.closedReason, 'declined');
     assert.equal(expired.closedReason, 'expired');
     assert.notEqual(declined.closedReason, expired.closedReason);
+  });
+});
+
+/* ───────────────────────── 등급 어휘와 2단계 노출 ─────────────────────────
+ * ui_ux.md 의 개선안 두 개를 고정한다.
+ *  - §1.1 등급 라벨(포기 못함 / 우선 고려 / 타협 가능)은 한 곳에서만 온다
+ *  - §2.2 2단계 노출이 "전체 조건 목록"을 그릴 수 있다
+ */
+describe('등급 어휘와 2단계 노출', () => {
+  test('㉓ 등급 라벨이 세 등급을 모두 덮고, 거부 메시지도 같은 단어를 쓴다', () => {
+    IR.GRADES.forEach((grade) => {
+      assert.equal(typeof IR.GRADE_LABELS[grade], 'string', grade + ' 라벨이 없다');
+      assert.ok(IR.GRADE_LABELS[grade].length > 0, grade + ' 라벨이 비었다');
+      assert.equal(IR.gradeLabel(grade), IR.GRADE_LABELS[grade]);
+    });
+
+    // 화면 라벨과 거부 문구가 다른 단어를 쓰면 사용자는 둘을 다른 개념으로 읽는다.
+    const tooMany = IR.send(store(), draft({
+      conditions: conditions({
+        age: { grade: 'must', value: '30대 초반' },
+        region: { grade: 'must', value: '서울' },
+        religion: { grade: 'must', value: '무교' }
+      })
+    }), T0);
+    assert.equal(tooMany.error, 'MUST_LIMIT_EXCEEDED');
+    assert.ok(tooMany.message.includes(IR.GRADE_LABELS.must), tooMany.message);
+
+    const blank = IR.send(store(), draft({ conditions: conditions() }), T0);
+    assert.equal(blank.error, 'NO_SIGNAL');
+    assert.ok(blank.message.includes(IR.GRADE_LABELS.any), blank.message);
+  });
+
+  test('㉔ allConditions 는 7개 항목 전부를 FIELDS 순서로 돌려준다', () => {
+    const { request } = sent(store());
+    const all = IR.allConditions(request);
+
+    // 펼칠 때마다 순서가 바뀌면 같은 사람의 부탁을 읽을 수 없다.
+    assert.equal(all.length, IR.FIELDS.length);
+    assert.deepEqual(all.map((c) => c.key), IR.FIELD_KEYS);
+
+    const byKey = {};
+    all.forEach((c) => { byKey[c.key] = c; });
+
+    assert.equal(byKey.age.gradeLabel, IR.GRADE_LABELS.must);
+    assert.equal(byKey.marriageTiming.gradeLabel, IR.GRADE_LABELS.prefer);
+    assert.equal(byKey.religion.gradeLabel, IR.GRADE_LABELS.any);
+    assert.equal(byKey.religion.value, null);
+
+    // 1단계가 접어둔 "우선 고려"는 2단계에서 되살아난다 — 버려지지 않는다.
+    assert.deepEqual(IR.preferConditions(request).map((c) => c.key), ['marriageTiming']);
   });
 });

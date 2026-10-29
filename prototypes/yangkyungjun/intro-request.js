@@ -28,8 +28,8 @@
    * 안 쌓인 데이터는 되돌릴 수 없다.
    */
   var RULES = {
-    maxMust: 2,                  // 필수 조건 상한. "양보"를 강제로 드러내는 장치.
-    minSignal: 1,                // 필수+선호가 0이면 부탁이 아니라 백지다.
+    maxMust: 2,                  // "포기 못함" 상한. "양보"를 강제로 드러내는 장치.
+    minSignal: 1,                // 포기 못함+우선 고려가 0이면 부탁이 아니라 백지다.
     maxActiveRequests: 3,        // 싱글 1명이 동시에 띄울 수 있는 부탁 수.
     expireDays: 7,               // 보낸 뒤 무응답 만료.
     holdExtendDays: 7,           // 보류 시 연장.
@@ -53,7 +53,21 @@
   ];
 
   var FIELD_KEYS = FIELDS.map(function (f) { return f.key; });
-  var GRADES = ['must', 'prefer', 'any']; // 필수 / 선호 / 상관없음
+  var GRADES = ['must', 'prefer', 'any'];
+
+  /* 등급의 사용자 라벨. 내부 키(must/prefer/any)는 바꾸지 않는다 — 저장된 데이터가 전부 이 키다.
+   * 바꾸는 것은 사람이 읽는 말뿐이고, 그 말은 여기 한 곳에만 둔다.
+   * 화면과 거부 메시지가 서로 다른 단어를 쓰면 사용자는 둘을 다른 개념으로 읽는다.
+   *
+   * `등급`이 아니라 `포기 / 고려 / 타협`의 말로 적는 이유(ui_ux.md §1.1):
+   * "필수"는 요구 목록을 적는 일로 읽히고 7개를 다 찍고 싶게 만든다.
+   * "포기 못함"은 그 자체가 나머지를 포기한다는 뜻이라, 라벨을 읽는 순간 상한이 납득된다.
+   */
+  var GRADE_LABELS = {
+    must:   '포기 못함',
+    prefer: '우선 고려',
+    any:    '타협 가능'
+  };
 
   var STATES = ['sent', 'held', 'accepted', 'closed'];
   var ACTIVE_STATES = ['sent', 'held', 'accepted'];
@@ -134,7 +148,11 @@
       if (entry.grade === 'must') mustCount += 1;
 
       if (!entry.value) {
-        errors.push({ error: 'MISSING_VALUE', field: key, message: FIELD_LABEL(key) + '을(를) 필수/선호로 두었으면 값을 골라야 합니다.' });
+        errors.push({
+          error: 'MISSING_VALUE',
+          field: key,
+          message: FIELD_LABEL(key) + '을(를) "' + GRADE_LABELS.must + '" 또는 "' + GRADE_LABELS.prefer + '"로 두었으면 값을 골라야 합니다.'
+        });
         return;
       }
       if (FIELD_OPTIONS(key).indexOf(entry.value) === -1) {
@@ -145,13 +163,13 @@
     if (mustCount > RULES.maxMust) {
       errors.push({
         error: 'MUST_LIMIT_EXCEEDED',
-        message: '필수 조건은 최대 ' + RULES.maxMust + '개까지입니다. 지금 ' + mustCount + '개를 고르셨습니다.'
+        message: '"' + GRADE_LABELS.must + '"은 최대 ' + RULES.maxMust + '개까지입니다. 지금 ' + mustCount + '개를 고르셨습니다.'
       });
     }
     if (signalCount < RULES.minSignal) {
       errors.push({
         error: 'NO_SIGNAL',
-        message: '모든 항목이 "상관없음"입니다. 주선자가 떠올릴 실마리가 하나도 없습니다.'
+        message: '모든 항목이 "' + GRADE_LABELS.any + '"입니다. 주선자가 떠올릴 실마리가 하나도 없습니다.'
       });
     }
     if (draft.note && String(draft.note).length > RULES.maxNoteLength) {
@@ -393,6 +411,28 @@
       .map(function (f) { return { key: f.key, label: f.label, value: request.conditions[f.key].value }; });
   }
 
+  /* 7개 항목 전부. 2단계 노출(ui_ux.md §2.2)의 "전체 조건 목록"이 쓴다.
+   * 주선자가 카드를 펼쳤을 때 "타협 가능"까지 보여야, 싱글이 등급을 매긴 수고가
+   * 2개만 남고 버려지지 않는다. 순서는 FIELDS 순서를 그대로 지킨다 —
+   * 등급순으로 다시 정렬하면 같은 사람의 부탁이 열 때마다 다른 순서로 보인다.
+   */
+  function allConditions(request) {
+    return FIELDS.map(function (f) {
+      var entry = request.conditions[f.key] || { grade: 'any', value: null };
+      return {
+        key: f.key,
+        label: f.label,
+        grade: entry.grade,
+        gradeLabel: gradeLabel(entry.grade),
+        value: entry.value
+      };
+    });
+  }
+
+  function gradeLabel(grade) {
+    return GRADE_LABELS[grade] || grade;
+  }
+
   function activeRequestsOf(store, singleId, now) {
     return tick(store, now).requests.filter(function (r) {
       return r.singleId === singleId && isActive(r);
@@ -415,6 +455,7 @@
     FIELDS: FIELDS,
     FIELD_KEYS: FIELD_KEYS,
     GRADES: GRADES,
+    GRADE_LABELS: GRADE_LABELS,
     STATES: STATES,
     ACTIVE_STATES: ACTIVE_STATES,
     CLOSE_REASONS: CLOSE_REASONS,
@@ -437,6 +478,8 @@
     matchmakerLabel: matchmakerLabel,
     mustConditions: mustConditions,
     preferConditions: preferConditions,
+    allConditions: allConditions,
+    gradeLabel: gradeLabel,
     activeRequestsOf: activeRequestsOf,
     remainingSlots: remainingSlots,
     inboxOf: inboxOf,

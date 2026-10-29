@@ -201,14 +201,20 @@
         </div>
 
         <!-- 조건 -->
-        <div class="mb-4 flex items-baseline justify-between">
-          <h3 class="text-[13.5px] tracking-title text-ink">이런 사람을 소개해 주세요</h3>
-          <span id="mustMeter" class="flex items-center gap-2 text-[11.5px] text-ink3"></span>
+        <div class="mb-4 flex items-start justify-between gap-3">
+          <div>
+            <h3 class="text-[13.5px] tracking-title text-ink">이런 사람을 소개해 주세요</h3>
+            <p class="mt-1.5 text-[11.5px] leading-6 text-ink2">
+              절대 포기할 수 없는 기준은 <b class="text-seal">딱 2가지</b>만 선택해 주세요.
+            </p>
+          </div>
+          <span id="mustMeter" class="mt-0.5 flex shrink-0 items-center gap-2 text-[11.5px] text-ink3"></span>
         </div>
         <div id="condList" class="space-y-0.5"></div>
 
         <p class="mt-4 rounded-sm border-l-2 border-line2 bg-ivory/50 px-4 py-2.5 text-[11.5px] leading-6 text-ink2">
-          필수는 <b class="text-seal">두 개까지</b>입니다. 무엇을 양보할지 고르는 일이 이 기능의 핵심입니다.
+          💡 조건이 너무 까다로우면 주선자가 사람을 떠올리기 힘들어요.
+          주선자에게 먼저 보일 <b class="text-seal">'포기 못 할 기준 2개'</b>를 신중히 골라보세요.
         </p>
 
         <!-- 한마디 -->
@@ -254,7 +260,9 @@
       <div class="relative border-b border-line/80 px-7 py-7 md:px-9">
         <p class="font-garamond tracking-seal text-[10px] uppercase text-ink3">The Guest Hall · 주선자</p>
         <h2 class="mt-2.5 text-[23px] tracking-title">사랑채 <span class="ml-1.5 text-[12px] font-normal tracking-normal text-ink3">舍廊</span></h2>
-        <p class="mt-2 text-[12.5px] leading-6 text-ink2">받은 소개 부탁을 살펴보고, 확인 · 보류 · 종료합니다.</p>
+        <p class="mt-2 text-[12.5px] leading-6 text-ink2">
+          <b class="font-normal text-seal">포기 못함</b> 2개로 먼저 훑고, 떠오르는 사람이 있으면 펼쳐서 전체 조건을 봅니다.
+        </p>
 
         <div class="absolute right-7 top-7 flex h-11 w-11 items-center justify-center rounded-[3px] bg-seal text-[19px] leading-none tracking-normal text-[#FBF0E6] shadow-lift md:right-9">뚜</div>
       </div>
@@ -269,7 +277,7 @@
 
   <p class="py-12 text-center text-[11.5px] leading-7 text-ink3">
     상태 기계는 <code class="font-garamond tracking-wide">intro-request.js</code> 안에 있습니다 ·
-    검증은 <code class="font-garamond tracking-wide">node --test</code> (22개)
+    검증은 <code class="font-garamond tracking-wide">node --test</code> (24개)
   </p>
 </main>
 
@@ -311,6 +319,9 @@
   var state      = load();
   var draft      = freshDraft();
   var resetArmed = false;
+  /* 어느 카드가 펼쳐져 있는지. 저장하지 않는다 — 펼침은 화면 상태이고,
+   * 남아야 하는 사실(열어봤다)은 부탁의 readAt 에 이미 박혀 있다. */
+  var expanded   = {};
 
   /* ── 저장 ─────────────────────────────── */
   function fresh() {
@@ -338,6 +349,11 @@
   function mmName(id) {
     for (var i = 0; i < MATCHMAKERS.length; i++) if (MATCHMAKERS[i].id === id) return MATCHMAKERS[i].name;
     return id;
+  }
+  function findRequest(id) {
+    var rs = state.store.requests;
+    for (var i = 0; i < rs.length; i++) if (rs[i].id === id) return rs[i];
+    return null;
   }
   function fmtDate(ms) {
     var d = new Date(ms), w = ['일','월','화','수','목','금','토'][d.getDay()];
@@ -447,11 +463,12 @@
     document.getElementById('condList').innerHTML = IR.FIELDS.map(function (f) {
       var e = draft.conditions[f.key];
 
-      var grades = [['must','필수'],['prefer','선호'],['any','상관없음']].map(function (g) {
-        var on  = e.grade === g[0];
-        var cls = 'flex-1 border-r border-line/70 py-2 text-[12px] transition-colors duration-300 last:border-r-0 ' +
-                  (on ? GRADE_ON[g[0]] : 'bg-[#FBF7EC] text-ink2 hover:bg-ivory');
-        return '<button type="button" data-grade="' + g[0] + '" class="' + cls + '">' + g[1] + '</button>';
+      // 라벨은 IR.GRADE_LABELS 에서만 온다. 화면과 거부 메시지가 같은 단어를 써야 한다.
+      var grades = IR.GRADES.map(function (g) {
+        var on  = e.grade === g;
+        var cls = 'flex-1 border-r border-line/70 py-2 text-[11.5px] transition-colors duration-300 last:border-r-0 ' +
+                  (on ? GRADE_ON[g] : 'bg-[#FBF7EC] text-ink2 hover:bg-ivory');
+        return '<button type="button" data-grade="' + g + '" class="' + cls + '">' + esc(IR.GRADE_LABELS[g]) + '</button>';
       }).join('');
 
       var opts = f.options.map(function (o) {
@@ -476,7 +493,8 @@
               (i < n ? 'bg-seal' : 'border border-line2') + '"></span>';
     }
     document.getElementById('mustMeter').innerHTML =
-      pips + '<span class="ml-1 font-garamond tracking-wider">필수 ' + n + ' / ' + IR.RULES.maxMust + '</span>';
+      pips + '<span class="ml-1 tracking-title ' + (n >= IR.RULES.maxMust ? 'text-seal' : '') + '">' +
+      IR.GRADE_LABELS.must + ' ' + n + ' / ' + IR.RULES.maxMust + '</span>';
   }
 
   function renderNote() {
@@ -493,18 +511,55 @@
     document.getElementById('cancelEditBtn').classList.toggle('hidden', !editing);
   }
 
-  function badges(r, withPrefer) {
-    var h = IR.mustConditions(r).map(function (c) {
-      return '<span class="rounded-sm border border-seal/70 bg-sealsoft px-2.5 py-1 text-[11.5px] text-seal">' +
+  var GRADE_CHIP = {
+    must:   'border-seal/70 bg-sealsoft text-seal',
+    prefer: 'border-pine/50 bg-[#F1F4EC] text-pine',
+    any:    'border-line2 bg-ivory text-ink3'
+  };
+
+  /* 등급 한 묶음을 캡션 + 칩 줄로. 비어 있으면 아무것도 그리지 않는다. */
+  function gradeGroup(r, grade) {
+    var items = grade === 'must' ? IR.mustConditions(r) : IR.preferConditions(r);
+    if (!items.length) return '';
+
+    var chips = items.map(function (c) {
+      return '<span class="rounded-sm border px-2.5 py-1 text-[11.5px] ' + GRADE_CHIP[grade] + '">' +
              esc(c.label) + ' · ' + esc(c.value) + '</span>';
     }).join('');
-    if (withPrefer) {
-      h += IR.preferConditions(r).map(function (c) {
-        return '<span class="rounded-sm border border-pine/50 bg-[#F1F4EC] px-2.5 py-1 text-[11.5px] text-pine">' +
-               esc(c.label) + ' · ' + esc(c.value) + '</span>';
-      }).join('');
-    }
-    return '<div class="flex flex-wrap gap-1.5">' + h + '</div>';
+
+    return '<div class="my-3">' +
+             '<p class="mb-1.5 text-[10.5px] tracking-title text-ink3">' + esc(IR.GRADE_LABELS[grade]) + '</p>' +
+             '<div class="flex flex-wrap gap-1.5">' + chips + '</div>' +
+           '</div>';
+  }
+
+  function noteBlock(r) {
+    if (!r.note) return '';
+    return '<p class="mt-3 border-l-2 border-line pl-3 text-[12.5px] leading-7 text-ink2">' + esc(r.note) + '</p>';
+  }
+
+  /* 2단계 — 전체 7개 항목.
+   * 등급순으로 다시 정렬하지 않는다. 펼칠 때마다 순서가 바뀌면 같은 사람의 부탁을 못 읽는다.
+   */
+  function conditionTable(r) {
+    var rows = IR.allConditions(r).map(function (c, i) {
+      return '<div class="grid grid-cols-[1fr_auto] items-center gap-3 px-3.5 py-2 ' +
+               (i % 2 ? 'bg-[#FBF7EC]' : 'bg-[#FFFEFB]') + '">' +
+               '<span class="text-[12px] text-ink2">' + esc(c.label) + '</span>' +
+               '<span class="flex items-center justify-end gap-2.5">' +
+                 '<span class="rounded-full border px-2 py-0.5 text-[10px] tracking-title ' + GRADE_CHIP[c.grade] + '">' +
+                   esc(c.gradeLabel) + '</span>' +
+                 '<span class="min-w-[84px] text-right text-[12px] ' + (c.value ? 'text-ink' : 'text-ink3/60') + '">' +
+                   esc(c.value || '—') + '</span>' +
+               '</span>' +
+             '</div>';
+    }).join('');
+
+    return '<div class="animate-rise mt-3 overflow-hidden rounded-sm border border-line">' +
+             '<p class="border-b border-line bg-ivory/60 px-3.5 py-2 text-[10.5px] tracking-title text-ink3">조건 ' +
+               IR.FIELDS.length + '개 전체</p>' +
+             rows +
+           '</div>';
   }
 
   function pill(r, forSingle) {
@@ -561,8 +616,9 @@
           '<span class="text-[14.5px] tracking-title">' + esc(mmName(r.matchmakerId)) + ' 님께</span>' +
           pill(r, true) +
         '</div>' +
-        badges(r, true) +
-        (r.note ? '<p class="mt-3 border-l-2 border-line pl-3 text-[12.5px] leading-7 text-ink2">' + esc(r.note) + '</p>' : '') +
+        gradeGroup(r, 'must') +
+        gradeGroup(r, 'prefer') +
+        noteBlock(r) +
         '<p class="mt-3 font-garamond text-[11.5px] tracking-wider text-ink3">' + esc(meta) + '</p>' +
         (acts ? '<div class="mt-3.5 flex flex-wrap gap-2">' + acts + '</div>' : ''),
         closed);
@@ -595,8 +651,8 @@
     }
 
     document.getElementById('inbox').innerHTML = items.map(function (r) {
-      var read   = !!r.readAt;
       var closed = r.state === 'closed';
+      var open   = !!expanded[r.id];
 
       var acts = [];
       if (r.state === 'sent' || r.state === 'held') acts.push(['accept', '찾아볼게요', true]);
@@ -610,28 +666,41 @@
       // 주선자는 자기가 한 행동이므로 이유를 봐도 된다. 숨기는 쪽은 싱글이다.
       var closedText = { declined:'내가 종료했습니다', expired:'기한이 지나 닫혔습니다', cancelled:'상대가 부탁을 거두었습니다' }[r.closedReason];
 
-      var body = read
-        ? badges(r, true) + (r.note ? '<p class="mt-3 border-l-2 border-line pl-3 text-[12.5px] leading-7 text-ink2">' + esc(r.note) + '</p>' : '')
-        : badges(r, false) +
-          '<p class="mt-3 rounded-sm border border-dashed border-line bg-ivory/50 px-3.5 py-2.5 text-[11.5px] leading-6 text-ink3">' +
-            '양보 가능한 조건과 한마디는 열어본 뒤에 보입니다.<br>열어보면 상대는 더 이상 내용을 고칠 수 없습니다.' +
-          '</p>';
+      /* 1단계 — 목록을 훑는 동안 보이는 것: 누구 · 포기 못함 2개 · 한마디.
+       * 이게 전부여야 한다. 7개를 한꺼번에 들이대면 떠올리기 전에 지친다(PRD 최대 리스크).
+       */
+      var summary = gradeGroup(r, 'must') + noteBlock(r);
+
+      /* 2단계 — 펼쳤을 때: 우선 고려 + 전체 조건.
+       * 싱글이 매긴 등급이 2개만 남고 버려지지 않는 자리다(ui_ux.md §2.1).
+       */
+      var detail = open
+        ? gradeGroup(r, 'prefer') + conditionTable(r)
+        : (IR.isActive(r) && !r.readAt
+            ? '<p class="mt-3 rounded-sm border border-dashed border-line bg-ivory/50 px-3.5 py-2.5 text-[11.5px] leading-6 text-ink3">' +
+                '"' + esc(IR.GRADE_LABELS.prefer) + ' · ' + esc(IR.GRADE_LABELS.any) + '" 조건은 펼쳐 본 뒤에 보입니다.' +
+                '<br>펼쳐 보면 상대는 더 이상 내용을 고칠 수 없습니다.' +
+              '</p>'
+            : '');
 
       var meta = closed
         ? esc(closedText) + ' · ' + shortDate(r.closedAt)
         : '받은 날 ' + shortDate(r.createdAt) + ' · 앞으로 ' + daysLeft(r) + '일';
 
-      var openBtn = (!read && IR.isActive(r))
-        ? '<button class="' + BTN_GHOST + '" data-act="read" data-id="' + r.id + '">열어보기</button>' : '';
+      var toggle = '<button class="' + BTN_GHOST + '" data-expand="' + r.id + '">' +
+                     (open ? '접기' : '조건 전체 보기') +
+                     '<span class="ml-1.5 text-[10px] text-ink3">' + (open ? '▲' : '▼') + '</span>' +
+                   '</button>';
 
       return card(
         '<div class="mb-3 flex items-center justify-between gap-3">' +
           '<span class="text-[14.5px] tracking-title">' + esc(SINGLE_NAME) + ' 님의 부탁</span>' +
           pill(r, false) +
         '</div>' +
-        body +
+        summary +
+        detail +
         '<p class="mt-3 font-garamond text-[11.5px] tracking-wider text-ink3">' + meta + '</p>' +
-        (openBtn || actHtml ? '<div class="mt-3.5 flex flex-wrap gap-2">' + openBtn + actHtml + '</div>' : ''),
+        '<div class="mt-3.5 flex flex-wrap gap-2">' + toggle + actHtml + '</div>',
         closed);
     }).join('');
   }
@@ -661,8 +730,9 @@
       var next = el.dataset.grade;
 
       if (next === 'must' && e.grade !== 'must' && mustCount() >= IR.RULES.maxMust) {
-        notice('필수 조건은 최대 ' + IR.RULES.maxMust + '개입니다. 하나를 "선호"로 내려놓아야 새로 고를 수 있습니다. ' +
-               '— 무엇을 양보할지 고르는 일이 이 기능의 핵심입니다.');
+        notice('"' + IR.GRADE_LABELS.must + '"은 ' + IR.RULES.maxMust + '개까지입니다. ' +
+               '하나를 "' + IR.GRADE_LABELS.prefer + '"로 내려놓아야 새로 고를 수 있습니다. ' +
+               '— 조건이 너무 까다로우면 주선자가 사람을 떠올리기 힘들어요.');
         return;
       }
       e.grade = next;
@@ -690,8 +760,24 @@
 
     if (el.dataset.cancel) { apply(IR.cancel(state.store, el.dataset.cancel, state.now), '부탁을 거두었습니다'); return; }
 
+    /* 펼침 = 열람. 주선자가 전체 조건을 본 순간부터 싱글은 내용을 고칠 수 없다(스펙 §3.5).
+     * 접는 것은 열람이 아니므로 readAt 을 건드리지 않는다. */
+    if (el.dataset.expand) {
+      var rid  = el.dataset.expand;
+      var opening = !expanded[rid];
+      expanded[rid] = opening;
+
+      var target = findRequest(rid);
+      if (opening && target && IR.isActive(target) && !target.readAt) {
+        apply(IR.markRead(state.store, rid, state.now), '전체 조건을 열었습니다 — 이제 상대는 내용을 고칠 수 없습니다');
+      } else {
+        render();
+      }
+      return;
+    }
+
     if (el.dataset.edit) {
-      var t = state.store.requests.filter(function (r) { return r.id === el.dataset.edit; })[0];
+      var t = findRequest(el.dataset.edit);
       if (!t) return;
       draft = {
         matchmakerId: t.matchmakerId,
@@ -704,8 +790,20 @@
     }
 
     if (el.dataset.act) {
-      var msg = { read:null, accept:'찾아보겠다고 전했습니다', hold:'보류했습니다 — 기한이 7일 늘었습니다', decline:'부탁을 종료했습니다' }[el.dataset.act];
-      var fn  = { read:IR.markRead, accept:IR.accept, hold:IR.hold, decline:IR.decline }[el.dataset.act];
+      var msg = { accept:'찾아보겠다고 전했습니다', hold:'보류했습니다 — 기한이 7일 늘었습니다', decline:'부탁을 종료했습니다' }[el.dataset.act];
+      var fn  = { accept:IR.accept, hold:IR.hold, decline:IR.decline }[el.dataset.act];
+
+      // 찾아보겠다고 한 사람에게 필요한 건 전체 조건이다. 한 번 더 누르게 하지 않는다.
+      // 확인도 열람으로 센다(ui_ux.md §2.2 "확인을 누르거나 상세 카드를 열었을 때").
+      if (el.dataset.act === 'accept') {
+        expanded[el.dataset.id] = true;
+        var target2 = findRequest(el.dataset.id);
+        if (target2 && IR.isActive(target2) && !target2.readAt) {
+          var readResult = IR.markRead(state.store, el.dataset.id, state.now);
+          if (readResult.ok) state.store = readResult.store;
+        }
+      }
+
       apply(fn(state.store, el.dataset.id, state.now), msg);
       return;
     }
